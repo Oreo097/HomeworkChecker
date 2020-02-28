@@ -133,20 +133,21 @@ if __name__ == "__main__":
     point = int(input("请设置分值： "))
     maxcolumn = ws.max_column
     maxrow = ws.max_row
-    row = int(info[0])
-    column = int(info[1])
+    row_s = int(info[0])
+    column_s = int(info[1])
     finalgrade = [[], [], []]  # 储存名字和成绩的列表
     print("最大行数为:"+str(maxrow))
     print("最大列数位:"+str(maxcolumn))
-    a = (maxcolumn-column)+1
+    a = (maxcolumn-column_s)+1
     print("作业中答案列数为："+str(a))
     if(a != len(answer)):
         print("答案位数错误")
         print("失败")
     else:
+        row=row_s
         while row <= maxrow:
             grade = 0
-            column = 7  # 重置列数
+            column = column_s  # 重置列数
             num_ans = 0
             numb_ans_list = 0
             answer_list = []
