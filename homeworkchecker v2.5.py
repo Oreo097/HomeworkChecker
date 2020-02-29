@@ -31,7 +31,7 @@ def set_answer_address():  # 获取答案文件路径
 
 
 def get_homework_list(homework_sheet, row_start, column_start, name_column, check_column):  # 将作业转换成列表
-    homework_list = [[], [], [], []]  # 这里分别是 姓名 是否答题 成绩 答案
+    homework_list = [[], [], [], []]  # 这里分别是 0:姓名 1:是否答题 2:成绩 3:答案
     homework_row_max = homework_sheet.max_row
     print("作业最大行数为："+str(homework_row_max))
     homework_column_max = homework_sheet.max_column
@@ -80,7 +80,7 @@ def get_answer_homework(homework_sheet, row_start, column_start):  # 获取学�
             answer_list_row = []  # 每一行的成绩
             value = homework_sheet.cell(
                 row_homework_sheet, column_homework_sheet).value  # 获取数据
-            rectify_vlaue_type(value)  # 纠正数据类型为string
+            rectify_vlaue_string(value)  # 纠正数据类型为string
             answer_list_row.append(value)  # 加入行列表
             column_homework_sheet += 1  # 指向下一列
         answer_list.append(answer_list_row)
@@ -91,12 +91,12 @@ def get_answer_homework(homework_sheet, row_start, column_start):  # 获取学�
 
 def get_anser_list(answer_sheet):  # 将答案转换成列表
     answer_list = []
-    row_answer_sheet = 1
-    answer_row_max = answer_sheet.max_row
+    row_answer_sheet = 1  # 初始化行索引
+    answer_row_max = answer_sheet.max_row  # 取得最大长度
     print("答案表的最大长度为："+str(answer_row_max))
     while(row_answer_sheet <= answer_row_max):
         cell_value = answer_sheet.cell(row_answer_sheet, 1).value
-        cell_value = rectify_vlaue_type(cell_value)
+        cell_value = rectify_vlaue_string(cell_value)
         answer_list.append(cell_value)
         row_answer_sheet += 1
     print("答案列表为：")
@@ -104,9 +104,29 @@ def get_anser_list(answer_sheet):  # 将答案转换成列表
     return answer_list
 
 
-def rectify_vlaue_type(value):  # 纠正数据类型为string
+def get_grade_answer(anwer_sheet):  # 获取每道题的分值
+    answer_grade_list = []
+    row_answer_sheet = 1  # 初始化行索引
+    answer_row_max = answer_sheet.max_row  # 取得最大长度
+    while(row_answer_sheet <= answer_row_max):
+        cell_value = answer_sheet.cell(row_answer_sheet, 1).value
+        cell_value = rectify_vlaue_int(cell_value)
+        answer_grade_list.append(cell_value)
+        row_answer_sheet += 1
+    print("答案分值列表为：")
+    print(answer_list)
+    return answer_grade_list
+
+
+def rectify_vlaue_string(value):  # 纠正数据类型为string
     if(not type(value) == type("a")):
         value = str(value)
+    return value
+
+
+def rectify_vlaue_int(value):  # 纠正数据类型为int
+    if(not type(value) == type(1)):
+        value = int(value)
     return value
 
 
@@ -122,16 +142,25 @@ def get_work_sheet(workbook):  # 获取默认工作表
 
 def delete_duplication_data(grade_list):  # 处理重复的数据
 
-
     return grade_list
 
 
 def compute_grade(homework_list, answer):  # 计算成绩
+    grade_list_row_index = 0
+    for row in homework_list[3]:
+        grade_row = compute_grade_row(row)  # 计算单行成绩
+        homework_list[2][grade_list_row_index] = grade_row  # 写入单行成绩
+        grade_list_row_index += 1  # 指向下一行
+    return homework_list
 
-    return grade_list
 
-def compute_grade_row(homework_row_list,answer):#计算单行成绩
-
+def compute_grade_row(homework_row_list, answer_list, grade_list):  # 计算单行成绩
+    answer_index = 0
+    grade_row = 0
+    for answer in homework_row_list:
+        if(answer == answer_list[answer_index]):
+            grade_row += grade_list[answer_index]
+        answer_index += 1  # 指向下一个
     return grade_row
 
 
@@ -160,7 +189,7 @@ def is_first_setup():  # 判断是否第一次启动
         return False
 
 
-def applicate_setting():  # 配置设置这个
+def applicate_setting():  # 配置设置
     kill_list = config_dict["剔除名单"]
     row_start = config_dict["默认起始行"]
     column_start = config_dict["默认起始列"]
