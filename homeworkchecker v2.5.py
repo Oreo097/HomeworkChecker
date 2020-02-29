@@ -107,15 +107,26 @@ def get_anser_list(answer_sheet):  # 将答案转换成列表
 def get_grade_answer(anwer_sheet):  # 获取每道题的分值
     answer_grade_list = []
     row_answer_sheet = 1  # 初始化行索引
-    answer_row_max = answer_sheet.max_row  # 取得最大长度
-    while(row_answer_sheet <= answer_row_max):
-        cell_value = answer_sheet.cell(row_answer_sheet, 1).value
-        cell_value = rectify_vlaue_int(cell_value)
-        answer_grade_list.append(cell_value)
-        row_answer_sheet += 1
-    print("答案分值列表为：")
-    print(answer_list)
-    return answer_grade_list
+    if(answer_sheet.cell(2, 2) == None or answer_sheet.cell(2, 2) == ""):
+        answer_row_max = answer_sheet.max_row  # 取得最大长度
+        while(row_answer_sheet <= answer_row_max):
+            cell_value = answer_sheet.cell(1, 2).value
+            cell_value = rectify_vlaue_int(cell_value)
+            answer_grade_list.append(cell_value)
+            row_answer_sheet += 1
+        print("答案分值列表为：")
+        print(answer_list)
+        return answer_grade_list
+    else:
+        answer_row_max = answer_sheet.max_row  # 取得最大长度
+        while(row_answer_sheet <= answer_row_max):
+            cell_value = answer_sheet.cell(row_answer_sheet, 2).value
+            cell_value = rectify_vlaue_int(cell_value)
+            answer_grade_list.append(cell_value)
+            row_answer_sheet += 1
+        print("答案分值列表为：")
+        print(answer_list)
+        return answer_grade_list
 
 
 def rectify_vlaue_string(value):  # 纠正数据类型为string
@@ -140,15 +151,55 @@ def get_work_sheet(workbook):  # 获取默认工作表
     return sheet
 
 
-def delete_duplication_data(grade_list):  # 处理重复的数据
+def delete_target_data(homework_list, target_list):  # 去除特定目标数据
+    homework_index = 0
+    delete_list = []
+    for name in homework_list[0]:
+        for target_name in target_list:
+            if target_name == name:
+                delete_list.append(homework_index)
+        homework_index+=1#指向下一个
+    for index in delete_list:
+        del homework_list[0][index]
+        del homework_list[1][index]
+        del homework_list[2][index]
+        del homework_list[3][index]
+    return homework_list
 
-    return grade_list
+def split_name(homework_list,split_list):#精简名字
+    name_index = 0#初始化名字索引
+    for name in homework_list[0]:
+        name.rstrip()
+        for a in split_list:
+            if name.find(a) >= 0:
+                newname = name.split(a)
+                grade[0][name_num] = newname[0]
+                break
+        name_index += 1
+    return homework_list
+
+def delete_duplication_data(homework_list):  # 处理重复的数据
+    index_row = 0#初始化行索引
+    while(index_row<=len(homework_list[0])):
+        offset=1#初始化偏移量
+        delete_list = []#初始化要删除的位置列表
+        while(index_row+offset<=len(homework_list[0])):
+            if(homework_list[0][index_row]==homework_list[0][index_row+offset]):#判断是否相等
+                if(homework_list[1][index_row+offset]=="否"):#判断是否答题
+                    delete_list.append((index_row+offset))#将索引值加入删除名单
+            delete_offset=0#纠正删除的偏移量
+            for index in delete_list:#删除应该删除的数据
+                del homework_list[0][index-offset]
+                del homework_list[1][index-offset]
+                del homework_list[2][index-offset]
+                del homework_list[3][index-offset]
+    return homework_list
 
 
-def compute_grade(homework_list, answer):  # 计算成绩
+def compute_grade(homework_list, answer_list, grade_list):  # 计算成绩
     grade_list_row_index = 0
     for row in homework_list[3]:
-        grade_row = compute_grade_row(row)  # 计算单行成绩
+        grade_row = compute_grade_row(row, answer_list, grade_list)  # 计算单行成绩
         homework_list[2][grade_list_row_index] = grade_row  # 写入单行成绩
         grade_list_row_index += 1  # 指向下一行
     return homework_list
@@ -175,9 +226,10 @@ def create_json():  # 生成json文件
                    "默认起始列": 7,
                    "默认姓名列": 1,
                    "默认是否答题列": 6,
-                   "剔除名单": []}
+                   "剔除名单": [],
+                   "切除关键词": []}
     with open("config.json", "w") as json_file:
-        json.dump(config_dict, json_file)
+        json.dump(config_dict, json_file,ensure_ascii=False, encoding='utf-8')
 
     json_file.close()
 
@@ -190,7 +242,8 @@ def is_first_setup():  # 判断是否第一次启动
 
 
 def applicate_setting():  # 配置设置
-    kill_list = config_dict["剔除名单"]
+    target_list = config_dict["剔除名单"]
+    split_list = config_dict["切除关键词"]
     row_start = config_dict["默认起始行"]
     column_start = config_dict["默认起始列"]
     name_column = config_dict["默认姓名列"]
@@ -203,6 +256,28 @@ def check_answer_row(homework_sheet, row_start, answer_list):  # 检查答案与
     else:
         return False
 
+def output_excel(homework_list):#输出表格
+    row = 1#初始化行
+    newwb = Workbook()
+    newws = newwb.active
+    for name in homework_list[0]:#输出名字
+        newws.cell(row, 1).value = name
+        row += 1
+    row = 1#初始化行
+    for grade_final in homework_list[2]:#输出成绩
+        newws.cell(row, 2).value = grade_final
+        row += 1
+    row = 1#初始化行
+    for answer in homework_list[3]:#输出答案
+        column = 3#初始化列
+        for answer_s in answer:#横向输出
+            newws.cell(row, column).value = answer_s
+            column += 1
+        row += 1
+    address = input("请输入输出地址：")
+    if(not address.endswith(".xlsx")):#纠正输入错误
+        address=address+".xlsx"
+    newwb.save(address)
 
 if __name__ == "__main__":
     print("欢迎使用")
@@ -217,7 +292,8 @@ if __name__ == "__main__":
         create_json()
     #配置全局变量设置
     config_dict = load_json("config.json")
-    kill_list = config_dict["剔除名单"]
+    target_list = config_dict["剔除名单"]
+    split_list = config_dict["切除关键词"]
     row_start = config_dict["默认起始行"]
     column_start = config_dict["默认起始列"]
     name_column = config_dict["默认姓名列"]
@@ -232,19 +308,20 @@ if __name__ == "__main__":
         homework_address = set_homework_address()
         if check_address(homework_address):
             break
-    homework_workbook = load_workbook(homework_address)
-    homework_sheet = get_work_sheet(homework_workbook)
+    homework_workbook = load_workbook(homework_address)  # 获取作业表格
+    homework_sheet = get_work_sheet(homework_workbook)  # 获取作业工作表
     homework_list = get_homework_list(
-        homework_sheet, row_start, column_start, name_column, check_column)
+        homework_sheet, row_start, column_start, name_column, check_column)  # 获取作业列表
 
     #输入答案地址并检测
     while(True):
         answer_address = set_answer_address()
         if check_address(answer_address):
             break
-    answer_workbook = load_workbook(answer_address)
-    answer_sheet = get_work_sheet(answer_workbook)
-    answer_list = get_anser_list(answer_sheet)
+    answer_workbook = load_workbook(answer_address)  # 获取答案表格
+    answer_sheet = get_work_sheet(answer_workbook)  # 获取答案工作表
+    answer_list = get_anser_list(answer_sheet)  # 获取答案列表
+    grade_list = get_grade_answer(answer_sheet)  # 获取每道题的分值
 
     #循环验证答案与作业是否匹配
     while(True):
@@ -255,10 +332,22 @@ if __name__ == "__main__":
                 answer_address = set_answer_address()
                 if check_address(answer_address):
                     break
-            answer_workbook = load_workbook(answer_address)
-            answer_sheet = get_work_sheet(answer_workbook)
-            answer_list = get_anser_list(answer_sheet)
+            answer_workbook = load_workbook(answer_address)  # 获取答案表格
+            answer_sheet = get_work_sheet(answer_workbook)  # 获取答案工作表
+            answer_list = get_anser_list(answer_sheet)  # 获取答案列表
+            grade_list = get_grade_answer(answer_sheet)  # 获取每道题的分值
         else:
             break
+
+    #开始计算成绩
+    homework_list = compute_grade(homework_list, answer_list, grade_list)
+    #去除特定人
+    delete_target_data(homework_list, target_list)
+    #精简名字
+    split_name(homework_list,split_list)
+    #删除重复名字
+    delete_duplication_data(homework_list)
+    #输出表格
+    output_excel(homework_list)
 
     pass
