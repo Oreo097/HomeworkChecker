@@ -39,8 +39,8 @@ def get_homework_list(homework_sheet, row_start, column_start, name_column, chec
     name_list = get_column_homework(
         homework_sheet, row_start, name_column)  # 获取名字列表
     homework_list[0] = name_list  # 将姓名列表加入作业队列
-    answer_list = get_anser_list(
-        homework_sheet, row_start, column_start, name_column)  # 获取答案列表
+    answer_list = get_answer_homework(
+        homework_sheet, row_start, column_start)  # 获取答案列表
     homework_list[3] = answer_list  # 将答案队列加入作业队列
     check_list = get_column_homework(
         homework_sheet, row_start, check_column)  # 获取是否填写队列
@@ -69,27 +69,27 @@ def get_column_homework(homework_sheet, row_start, column):  # 获取一列数�
 
 
 def get_answer_homework(homework_sheet, row_start, column_start):  # 获取学生答案
-    answer_list = [[]]
+    answer_list = []
     answer_list_row_index = 0  # 列表行索引
     row_homework_sheet = row_start  # 初始化表格行索引
     homework_row_max = homework_sheet.max_row
     homework_column_max = homework_sheet.max_column
     while(row_homework_sheet <= homework_row_max):
-        column_homework_sheet = (column_start)  # 初始化表格列索引，因为名字占了一行所以
+        column_homework_sheet = column_start  # 初始化表格列索引，因为名字占了一行所以
+        answer_list_row = []  # 每一行的答案
         while(column_homework_sheet <= homework_column_max):
-            answer_list_row = []  # 每一行的成绩
             value = homework_sheet.cell(
                 row_homework_sheet, column_homework_sheet).value  # 获取数据
-            rectify_vlaue_string(value)  # 纠正数据类型为string
+            value=rectify_vlaue_string(value)  # 纠正数据类型为string
             answer_list_row.append(value)  # 加入行列表
             column_homework_sheet += 1  # 指向下一列
+        print(answer_list_row)
         answer_list.append(answer_list_row)
         row_homework_sheet += 1  # 指向下一行
         answer_list_row_index += 1  # 指向下一行
     return answer_list
 
-
-def get_anser_list(answer_sheet):  # 将答案转换成列表
+def get_anser_list(answer_sheet):  # 获取答案
     answer_list = []
     row_answer_sheet = 1  # 初始化行索引
     answer_row_max = answer_sheet.max_row  # 取得最大长度
@@ -107,7 +107,7 @@ def get_anser_list(answer_sheet):  # 将答案转换成列表
 def get_grade_answer(anwer_sheet):  # 获取每道题的分值
     answer_grade_list = []
     row_answer_sheet = 1  # 初始化行索引
-    if(answer_sheet.cell(2, 2) == None or answer_sheet.cell(2, 2) == ""):
+    if(answer_sheet.cell(2, 2).value == None or answer_sheet.cell(2, 2).value == ""):
         answer_row_max = answer_sheet.max_row  # 取得最大长度
         while(row_answer_sheet <= answer_row_max):
             cell_value = answer_sheet.cell(1, 2).value
@@ -115,7 +115,7 @@ def get_grade_answer(anwer_sheet):  # 获取每道题的分值
             answer_grade_list.append(cell_value)
             row_answer_sheet += 1
         print("答案分值列表为：")
-        print(answer_list)
+        print(answer_grade_list)
         return answer_grade_list
     else:
         answer_row_max = answer_sheet.max_row  # 取得最大长度
@@ -125,9 +125,8 @@ def get_grade_answer(anwer_sheet):  # 获取每道题的分值
             answer_grade_list.append(cell_value)
             row_answer_sheet += 1
         print("答案分值列表为：")
-        print(answer_list)
+        print(answer_grade_list)
         return answer_grade_list
-
 
 def rectify_vlaue_string(value):  # 纠正数据类型为string
     if(not type(value) == type("a")):
@@ -197,11 +196,9 @@ def delete_duplication_data(homework_list):  # 处理重复的数据
 
 
 def compute_grade(homework_list, answer_list, grade_list):  # 计算成绩
-    grade_list_row_index = 0
     for row in homework_list[3]:
         grade_row = compute_grade_row(row, answer_list, grade_list)  # 计算单行成绩
-        homework_list[2][grade_list_row_index] = grade_row  # 写入单行成绩
-        grade_list_row_index += 1  # 指向下一行
+        homework_list[2].append(grade_row)  # 写入单行成绩
     return homework_list
 
 
@@ -222,14 +219,14 @@ def load_json(address):  # 加载json默认设置文件
 
 
 def create_json():  # 生成json文件
-    config_dict = {"默认起始行": 2,
-                   "默认起始列": 7,
+    config_dict = {"默认起始行": 1,
+                   "默认起始列": 2,
                    "默认姓名列": 1,
                    "默认是否答题列": 6,
                    "剔除名单": [],
                    "切除关键词": []}
     with open("config.json", "w") as json_file:
-        json.dump(config_dict, json_file,ensure_ascii=False, encoding='utf-8')
+        json.dump(config_dict, json_file,ensure_ascii=False)
 
     json_file.close()
 
@@ -250,8 +247,10 @@ def applicate_setting():  # 配置设置
     check_column = config_dict["默认是否答题列"]
 
 
-def check_answer_row(homework_sheet, row_start, answer_list):  # 检查答案与作业是否匹配
-    if(((homework_sheet.max_row-row_start)+1) == len(answer_list)):
+def check_answer_row(homework_sheet, column_start, answer_list):  # 检查答案与作业是否匹配
+    print(len(answer_list))
+    print(str((homework_sheet.max_column-column_start)+1))
+    if(((homework_sheet.max_column-column_start)+1) == len(answer_list)):
         return True
     else:
         return False
@@ -325,7 +324,7 @@ if __name__ == "__main__":
 
     #循环验证答案与作业是否匹配
     while(True):
-        if(not check_answer_row(homework_sheet, row_start, answer_list)):
+        if(not check_answer_row(homework_sheet, column_start, answer_list)):
             print("答案位数错误")
             #输入答案地址并检测
             while(True):
