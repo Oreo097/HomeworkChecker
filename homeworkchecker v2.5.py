@@ -49,13 +49,13 @@ def get_homework_list(homework_sheet, row_start, column_start, name_column, chec
 
 
 def get_column_homework(homework_sheet, row_start, column):  # 获取一列数据
-    if(not column == 0):  # 检测是不是没有填写默认检查行
+    if(not column == None):  # 检测是不是没有填写默认检查行
         name_list = []
         row_homework_sheet = row_start  # 初始化行索引
         homework_row_max = homework_sheet.max_row
         while(row_homework_sheet <= homework_row_max):
             name_list.append(homework_sheet.cell(
-                row_homework_sheet, column))  # 加入列表
+                row_homework_sheet, column).value)  # 加入列表
             row_homework_sheet += 1  # 指向下一行
         return name_list
     else:
@@ -63,7 +63,7 @@ def get_column_homework(homework_sheet, row_start, column):  # 获取一列数�
         row_homework_sheet = row_start  # 初始化行索引
         homework_row_max = homework_sheet.max_row
         while(row_homework_sheet <= homework_row_max):
-            name_list.append("是")  # 加入列表
+            name_list.append("否")  # 加入列表
             row_homework_sheet += 1  # 指向下一行
         return name_list
 
@@ -83,7 +83,7 @@ def get_answer_homework(homework_sheet, row_start, column_start):  # 获取学�
             value=rectify_vlaue_string(value)  # 纠正数据类型为string
             answer_list_row.append(value)  # 加入行列表
             column_homework_sheet += 1  # 指向下一列
-        print(answer_list_row)
+        #print(answer_list_row)
         answer_list.append(answer_list_row)
         row_homework_sheet += 1  # 指向下一行
         answer_list_row_index += 1  # 指向下一行
@@ -93,14 +93,14 @@ def get_anser_list(answer_sheet):  # 获取答案
     answer_list = []
     row_answer_sheet = 1  # 初始化行索引
     answer_row_max = answer_sheet.max_row  # 取得最大长度
-    print("答案表的最大长度为："+str(answer_row_max))
+    #print("答案表的最大长度为："+str(answer_row_max))
     while(row_answer_sheet <= answer_row_max):
         cell_value = answer_sheet.cell(row_answer_sheet, 1).value
         cell_value = rectify_vlaue_string(cell_value)
         answer_list.append(cell_value)
         row_answer_sheet += 1
-    print("答案列表为：")
-    print(answer_list)
+    #print("答案列表为：")
+    #print(answer_list)
     return answer_list
 
 
@@ -114,18 +114,21 @@ def get_grade_answer(anwer_sheet):  # 获取每道题的分值
             cell_value = rectify_vlaue_int(cell_value)
             answer_grade_list.append(cell_value)
             row_answer_sheet += 1
-        print("答案分值列表为：")
-        print(answer_grade_list)
+        #print("答案分值列表为：")
+        #print(answer_grade_list)
         return answer_grade_list
     else:
         answer_row_max = answer_sheet.max_row  # 取得最大长度
         while(row_answer_sheet <= answer_row_max):
             cell_value = answer_sheet.cell(row_answer_sheet, 2).value
+            if(cell_value==None or cell_value==""):
+                print("发现答案数分值据缺失，无法继续，请检查答案分值是否完整")
+                return None
             cell_value = rectify_vlaue_int(cell_value)
             answer_grade_list.append(cell_value)
             row_answer_sheet += 1
-        print("答案分值列表为：")
-        print(answer_grade_list)
+        #print("答案分值列表为：")
+        #print(answer_grade_list)
         return answer_grade_list
 
 def rectify_vlaue_string(value):  # 纠正数据类型为string
@@ -172,7 +175,7 @@ def split_name(homework_list,split_list):#精简名字
         for a in split_list:
             if name.find(a) >= 0:
                 newname = name.split(a)
-                grade[0][name_num] = newname[0]
+                homework_list[0][name_index] = newname[0]
                 break
         name_index += 1
     return homework_list
@@ -182,20 +185,26 @@ def delete_duplication_data(homework_list):  # 处理重复的数据
     while(index_row<=len(homework_list[0])):
         offset=1#初始化偏移量
         delete_list = []#初始化要删除的位置列表
-        while(index_row+offset<=len(homework_list[0])):
+        #length=len(homework_list[0])//debug用
+        while((index_row+offset+1)<=len(homework_list[0])):
             if(homework_list[0][index_row]==homework_list[0][index_row+offset]):#判断是否相等
                 if(homework_list[1][index_row+offset]=="否"):#判断是否答题
                     delete_list.append((index_row+offset))#将索引值加入删除名单
-            delete_offset=0#纠正删除的偏移量
-            for index in delete_list:#删除应该删除的数据
-                del homework_list[0][index-offset]
-                del homework_list[1][index-offset]
-                del homework_list[2][index-offset]
-                del homework_list[3][index-offset]
+            offset+=1#指向下一个
+        delete_offset=0#纠正删除的偏移量
+        for index in delete_list:#删除应该删除的数据
+            del homework_list[0][index-delete_offset]
+            del homework_list[1][index-delete_offset]
+            del homework_list[2][index-delete_offset]
+            del homework_list[3][index-delete_offset]
+            delete_offset+=1
+        index_row+=1#指向下一行
     return homework_list
 
 
 def compute_grade(homework_list, answer_list, grade_list):  # 计算成绩
+    if(grade_list==None):
+        return None
     for row in homework_list[3]:
         grade_row = compute_grade_row(row, answer_list, grade_list)  # 计算单行成绩
         homework_list[2].append(grade_row)  # 写入单行成绩
@@ -219,10 +228,10 @@ def load_json(address):  # 加载json默认设置文件
 
 
 def create_json():  # 生成json文件
-    config_dict = {"默认起始行": 1,
-                   "默认起始列": 2,
+    config_dict = {"默认起始行": 2,
+                   "默认起始列": 7,
                    "默认姓名列": 1,
-                   "默认是否答题列": 6,
+                   "默认是否答题列":6,
                    "剔除名单": [],
                    "切除关键词": []}
     with open("config.json", "w") as json_file:
@@ -248,8 +257,8 @@ def applicate_setting():  # 配置设置
 
 
 def check_answer_row(homework_sheet, column_start, answer_list):  # 检查答案与作业是否匹配
-    print(len(answer_list))
-    print(str((homework_sheet.max_column-column_start)+1))
+    print("答案长度: "+str(len(answer_list)))
+    print("作业长度: "+str((homework_sheet.max_column-column_start)+1))
     if(((homework_sheet.max_column-column_start)+1) == len(answer_list)):
         return True
     else:
@@ -281,7 +290,7 @@ def output_excel(homework_list):#输出表格
 if __name__ == "__main__":
     print("欢迎使用")
 
-    kill_list = []  # 剔除人的名单，全局变量
+    split_list = []  # 剔除人的名单，全局变量
     row_start = None
     column_start = None
     name_column = None
@@ -292,15 +301,19 @@ if __name__ == "__main__":
     #配置全局变量设置
     config_dict = load_json("config.json")
     target_list = config_dict["剔除名单"]
+    print("剔除名单:")
+    print(target_list)
     split_list = config_dict["切除关键词"]
+    print("切除关键词：")
+    print(split_list)
     row_start = config_dict["默认起始行"]
+    print("默认起始行："+str(row_start))
     column_start = config_dict["默认起始列"]
+    print("默认起始列："+str(column_start))
     name_column = config_dict["默认姓名列"]
+    print("默认姓名列："+str(name_column))
     check_column = config_dict["默认是否答题列"]
-    print("去除关键词名单:")
-    print(kill_list)
-    print("起始行为："+str(row_start))
-    print("起始列为："+str(column_start))
+    print("默认是否答题列："+str(check_column))
 
     #输入作业地址并检测
     while(True):
@@ -336,17 +349,29 @@ if __name__ == "__main__":
             answer_list = get_anser_list(answer_sheet)  # 获取答案列表
             grade_list = get_grade_answer(answer_sheet)  # 获取每道题的分值
         else:
+            print("答案检验对照正确")
             break
 
     #开始计算成绩
+    print("开始计算成绩")
     homework_list = compute_grade(homework_list, answer_list, grade_list)
-    #去除特定人
-    delete_target_data(homework_list, target_list)
-    #精简名字
-    split_name(homework_list,split_list)
-    #删除重复名字
-    delete_duplication_data(homework_list)
-    #输出表格
-    output_excel(homework_list)
+    if(homework_list==None):#判断是否有错误发生
+        print("程序结束")
+        input()
+    else:
+        #去除特定人
+        print("去除特定人")
+        delete_target_data(homework_list, target_list)
+        #精简名字
+        print("精简名字")
+        split_name(homework_list,split_list)
+        #删除重复名字
+        print("删除重复名字")
+        delete_duplication_data(homework_list)
+        #输出表格
+        print("输出表格")
+        output_excel(homework_list)
 
+        print("完成")
+        input()
     pass
